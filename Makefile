@@ -1,7 +1,17 @@
-MAIN = main
-NAME = ustcthesis
+MAIN=""
+
+ifeq ($(MAIN), "")
+	ALL=doc.tex example/example.tex
+	ALLDEP=doc example
+else
+	ALL=$(MAIN) doc.tex example/example.tex
+	ALLDEP=main doc example
+endif
+
+NAME = xustthesis
+UPSTREAM = ustcthesis
 CLSFILES = $(NAME).cls
-BSTFILES = $(NAME)-numerical.bst $(NAME)-authoryear.bst $(NAME)-bachelor.bst
+BSTFILES = $(UPSTREAM)-numerical.bst $(UPSTREAM)-authoryear.bst $(UPSTREAM)-bachelor.bst
 
 SHELL = bash
 LATEXMK = latexmk -xelatex
@@ -9,45 +19,33 @@ VERSION = $(shell cat $(NAME).cls | egrep -o "\[\d\d\d\d/\d\d\/\d\d v.+\]" \
 	  | egrep -o "v\S+")
 TEXMF = $(shell kpsewhich --var-value TEXMFHOME)
 
-.PHONY : main cls doc test save clean all install distclean zip FORCE_MAKE
+.PHONY: help all main doc example clean cleanall
 
-main : $(MAIN).pdf
+help:
+	-@echo "Usage:"
+	-@echo "    help:     help info"
+	-@echo "    all:      compile all tex (main, doc and example)"
+	-@echo "    doc:      compile doc tex"
+	-@echo "    example:  compile example tex"
+	-@echo "    clean:    clean all files (except pdf)"
+	-@echo "    cleanall: clean all files"
+	-@echo ""
+	-@echo "Varable:"
+	-@echo "    MAIN: set main tex"
 
-all : main doc
+all: $(ALLDEP)
 
-cls : $(CLSFILES) $(BSTFILES)
-
-doc : $(NAME)-doc.pdf
-
-$(MAIN).pdf : $(MAIN).tex $(CLSFILES) $(BSTFILES) FORCE_MAKE
+main: $(MAIN) $(CLSFILES) $(BSTFILES)
 	$(LATEXMK) $<
 
-$(NAME)-doc.pdf : $(NAME)-doc.tex FORCE_MAKE
+doc:
+	$(LATEXMK) doc.tex
+
+example: example/example.tex $(CLSFILES) $(BSTFILES)
 	$(LATEXMK) $<
 
-test:
-	l3build check
+clean:
+	$(LATEXMK) -c $(ALL) $(CLSFILES) $(BSTFILES)
 
-save:
-	bash test/save.sh
-
-clean : FORCE_MAKE
-	$(LATEXMK) -c $(MAIN).tex $(NAME)-doc.tex
-
-cleanall :
-	$(LATEXMK) -C $(MAIN).tex $(NAME)-doc.tex
-
-install : cls doc
-	mkdir -p $(TEXMF)/{doc,source,tex}/latex/$(NAME)
-	mkdir -p $(TEXMF)/bibtex/bst/$(NAME)
-	cp $(BSTFILES) $(TEXMF)/bibtex/bst/$(NAME)
-	cp $(NAME).pdf $(TEXMF)/doc/latex/$(NAME)
-	cp $(CLSFILES) $(TEXMF)/tex/latex/$(NAME)
-
-zip : main doc
-	ln -sf . $(NAME)
-	zip -r ../$(NAME)-$(VERSION).zip $(NAME)/{*.md,LICENSE,\
-	$(NAME)-doc.tex,$(NAME)-doc.pdf,$(NAME).cls,*.bst,figures,\
-	$(MAIN).tex,ustcsetup.tex,math-commands.tex,chapters,bib,$(MAIN).pdf,\
-	latexmkrc,Makefile}
-	rm $(NAME)
+cleanall:
+	$(LATEXMK) -C $(ALL) $(CLSFILES) $(BSTFILES)

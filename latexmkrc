@@ -1,11 +1,11 @@
 $pdf_mode = 5;
 
-$xelatex = "xelatex -file-line-error -halt-on-error -interaction=nonstopmode -no-pdf -synctex=1 %O %S";
+$xelatex = "xelatex -file-line-error -halt-on-error -interaction=nonstopmode -no-pdf -shell-escape -8bit -synctex=1 %O %S";
 $xdvipdfmx = "xdvipdfmx -q -E -o %D %O %S";
 
 $bibtex_use = 1.5;
 
-$clean_ext = "hd loa synctex.gz xdv";
+$clean_ext = "hd loa synctex.gz xdv listing";
 
 $makeindex = "makeindex -s gind.ist %O -o %D %S";
 add_cus_dep('glo', 'gls', 0, 'glo2gls');
