@@ -30,8 +30,11 @@
 \RequirePackage{kvoptions}
 
 % 提供一个 \cs{xustsetup} 命令支持 \emph{key-value} 的方式来设置，修改自原模板 \cs{ustcsetup}
-\newcommand\xustsetup{%
-  \kvsetkeys{xust}%
+\let\xust@setup@hook\@empty
+\newcommand\xustsetup[1]{%
+  \let\xust@setup@hook\@empty
+  \kvsetkeys{xust}{#1}%
+  \xust@setup@hook
 }
 
 % 同时用 \emph{key-value} 的方式来定义这些接口：
@@ -69,9 +72,6 @@
   \kv@define@key{xust@value}{name}{%
     \@namedef{xust@#1@@name}{##1}%
   }%
-  \kv@define@key{xust@value}{code}{%
-    \@namedef{xust@#1@@code}{##1}%
-  }%
   %
   % 由于在定义接口时，\cs{xust@\meta{key}@@code} 不一定有定义，
   % 而且在文档类/宏包中还有可能对该 |key| 的 |code| 进行添加。
@@ -79,9 +79,6 @@
   %
   \@namedef{xust@#1@@check}{}%
   \@namedef{xust@#1@@code}{}%
-  \@namedef{xust@#1@@hook}{%
-    \@nameuse{xust@#1@@code}%
-  }%
   %
   % 保存下 |choices = {}| 定义的内容，在定义 \cs{xust@\meta{name}} 后再执行。
   %
@@ -127,7 +124,6 @@
   \expandafter\let\csname xust@\@nameuse{xust@#1@@name}\endcsname\xust@@default
   \expandafter\ifx\csname xust@\@nameuse{xust@#1@@name}\endcsname\@empty\else
     \@nameuse{xust@#1@@check}%
-    \@nameuse{xust@#1@@hook}%
   \fi
   %
   % 定义 \cs{xustsetup} 接口。
@@ -135,7 +131,7 @@
   \kv@define@key{xust}{#1}{%
     \@namedef{xust@\@nameuse{xust@#1@@name}}{##1}%
     \@nameuse{xust@#1@@check}%
-    \@nameuse{xust@#1@@hook}%
+    \@nameuse{xust@#1@@code}%
   }%
 }
 
@@ -145,14 +141,6 @@
   \expandafter\g@addto@macro\csname xust@#1@@code\endcsname{#2}%
 }
 
-\newif\ifxust@degree@graduate
-\newcommand\xust@set@graduate{%
-  \ifxust@degree@bachelor
-    \xust@degree@graduatefalse
-  \else
-    \xust@degree@graduatetrue
-  \fi
-}
 \xust@define@key{
   degree = {
     choices = {
@@ -161,7 +149,6 @@
       bachelor,
     },
     default = doctor,
-    code    = {\xust@set@graduate},
   },
   degree-type = {
     name = degree@type,
@@ -170,6 +157,14 @@
       professional,
     },
     default = academic,
+  },
+  main-language = {
+    name = main@language,
+    choices = {
+      chinese,
+      english,
+    },
+    default = chinese,
   },
   language = {
     choices = {
@@ -266,17 +261,31 @@
     default = green,
   },
 }
-\ifxust@degree@bachelor
-  \ifxust@language@english
-    \xustsetup{section-style = arabic}
-  \fi
-\fi
+
+\xustsetup{main-language=\xust@language}%
+\let\xust@main@language\xust@language
 \xust@option@hook{language}{%
-  \ifxust@degree@bachelor
-    \ifxust@language@english
-      \xustsetup{section-style = arabic}%
-    \fi
+  \ifx\@begindocumenthook\@undefined\else
+    \xustsetup{main-language=\xust@language}%
+    \let\xust@main@language\xust@language
   \fi
+}
+\newcommand\xust@reset@main@language{%
+  \xustsetup{language = \xust@main@language}%
+  \let\xust@language\xust@main@language
+}
+
+\newif\ifxust@degree@graduate
+\newcommand\xust@set@graduate{%
+  \ifxust@degree@bachelor
+    \xust@degree@graduatefalse
+  \else
+    \xust@degree@graduatetrue
+  \fi
+}
+\xust@set@graduate
+\xust@option@hook{degree}{%
+  \xust@set@graduate
 }
 
 % 使用 \pkg{kvoptions} 提供的 key-value 接口，
@@ -340,7 +349,6 @@
 \RequirePackage[perpage]{footmisc}
 \RequirePackage{url}
 \RequirePackage{calc}
-\RequirePackage{natbib}
 \RequirePackage{notoccite}
 
 % 对冲突的宏包报错。
@@ -350,6 +358,13 @@
     \xust@error{The "#2" package is incompatible with required "#1"}
   }
 }
+
+\xust@package@conflict{biblatex}{bibunits}
+\xust@package@conflict{biblatex}{chapterbib}
+\xust@package@conflict{biblatex}{cite}
+\xust@package@conflict{biblatex}{multibib}
+\xust@package@conflict{biblatex}{natbib}
+
 \xust@package@conflict{unicode-math}{amscd}
 \xust@package@conflict{unicode-math}{amsfonts}
 \xust@package@conflict{unicode-math}{amssymb}
@@ -862,52 +877,69 @@
 % \subsection{处理语言}
 
 % 由于 Unicode 的一些标点符号是中西文混用的：
-% \unicodechar{00B7}、
-% \unicodechar{2013}、
-% \unicodechar{2014}、
-% \unicodechar{2018}、
-% \unicodechar{2019}、
-% \unicodechar{201C}、
-% \unicodechar{201D}、
-% \unicodechar{2025}、
-% \unicodechar{2026}、
-% \unicodechar{2E3A}，
+% U+00B7、U+2013、U+2014、U+2018、U+2019、
+% U+201C、U+201D、U+2025、U+2026、U+2E3A，
 % 所以要根据语言设置正确的字体。
-% \footnote{\url{https://github.com/CTeX-org/ctex-kit/issues/389}}
-% 所以要根据语言设置正确的字体。
-\newcommand\xust@setchinese{%
-  \xeCJKResetPunctClass
-}
-\newcommand\xust@setenglish{%
-  \xeCJKDeclareCharClass{HalfLeft}{"2018, "201C}%
-  \xeCJKDeclareCharClass{HalfRight}{%
-    "00B7, "2019, "201D, "2013, "2014, "2025, "2026, "2E3A%
-  }%
-}
-\newcommand\xust@setdefaultlanguage{%
+% https://github.com/CTeX-org/ctex-kit/issues/389
+\newcommand\xust@set@punctuations{%
   \ifxust@language@chinese
-    \xust@setchinese
+    \xeCJKDeclareCharClass{FullLeft}{"2018, "201C}%
+    \xeCJKDeclareCharClass{FullRight}{
+      "00B7, "2019, "201D, "2013, "2014, "2025, "2026, "2E3A,
+    }%
   \else
-    \xust@setenglish
+    \xeCJKDeclareCharClass{HalfLeft}{"2018, "201C}%
+    \xeCJKDeclareCharClass{HalfRight}{
+      "00B7, "2019, "201D, "2013, "2014, "2025, "2026, "2E3A,
+    }%
   \fi
 }
+\xust@set@punctuations
+\xust@option@hook{language}{\xust@set@punctuations}
 
 % 这里设置了中英文的各种名字。
 
 % 由于《撰写手册》中的“speciality”一词使用的是英式拼法，
 % 所以“acknowledgements”也保持一致。
-\ifxust@language@chinese
-  \renewcommand\listfigurename{插图清单}
-  \renewcommand\listtablename{表格清单}
-  \newcommand\xust@acknowledgements@name{致谢}
-  \newcommand\xust@publication@name{在读期间发表的学术论文与取得的研究成果}
-  \newcommand\xust@notation@name{符号说明}
-\else
-  \renewcommand\figurename{Fig.}
-  \newcommand\xust@acknowledgements@name{Acknowledgements}
-  \newcommand\xust@publication@name{Publications}
-  \newcommand\xust@notation@name{Notation}
-\fi
+\newcommand\xust@set@chapter@names{%
+  \ifxust@main@language@chinese
+    \def\contentsname{目录}%
+    \def\listfigurename{插图清单}%
+    \def\listtablename{表格清单}%
+    \def\bibname{参考文献}%
+    \def\appendixname{附录}%
+    \def\xust@acknowledgements@name{致谢}%
+    \def\xust@publication@name{在读期间发表的学术论文与取得的研究成果}%
+    \newcommand\xust@notation@name{符号说明}%
+  \else
+    \def\contentsname{Contents}%
+    \def\listfigurename{List of Figures}%
+    \def\listtablename{List of Tables}%
+    \ctexset{
+      chapter/name   = {\chaptername\space},
+    }%
+    \def\bibname{Bibliography}%
+    \def\appendixname{Appendix}%
+    \def\xust@acknowledgements@name{Acknowledgements}%
+    \def\xust@publication@name{Publications}%
+    \def\xust@notation@name{Notation}%
+  \fi
+}
+\xust@set@chapter@names
+\xust@option@hook{main-language}{\xust@set@chapter@names}
+
+% 这部分名称在正文中局部地修改语言时会发生变化。
+\newcommand\xust@set@names{%
+  \ifxust@language@chinese
+    \def\figurename{图}%
+    \def\tablename{表}%
+  \else
+    \def\figurename{Figure}%
+    \def\tablename{Table}%
+  \fi
+}
+\xust@set@names
+\xust@option@hook{language}{\xust@set@names}
 
 
 % \subsection{纸张和页面}
@@ -1160,7 +1192,7 @@
 % 注意这里的“单倍行距”的地方开启了“对齐到网格”，所以实际行距有所偏差，
 % 所以只能使用直尺测量。
 \newcommand\xust@makezhtitle{%
-  \xust@setchinese
+  \xustsetup{language=chinese}
   \begin{titlepage}%
     \xust@pdfbookmark{封面}%
     \centering
@@ -1194,12 +1226,12 @@
         \textsf{完成时间：} & \xust@date@zh
       \end{tabular}\par}%
   \end{titlepage}%
-  \xust@setdefaultlanguage
+  \xust@reset@main@language
 }
 
 % 英文封面
 \newcommand\xust@makeentitle{%
-  \xust@setenglish
+  \xustsetup{language=english}
   \begin{titlepage}%
     \xust@pdfbookmark{Title page}%
     \centering
@@ -1230,7 +1262,7 @@
         Finished time: \xust@date@en
       \end{tabular}\par}%
   \end{titlepage}%
-  \xust@setdefaultlanguage
+  \xust@reset@main@language
 }
 
 % 重新定义 \cs{maketitle}，调用 \cs{xust@makezhtitle}, \cs{xust@makeentitle}
@@ -1444,7 +1476,7 @@
   \xust@clist@use{\xust@keywords@en}{; }%
 }
 \newenvironment{abstract}{%
-  \xust@setchinese
+  \xustsetup{language=chinese}
   \ifxust@degree@graduate
     \xust@chapter{摘要}%
   \else
@@ -1456,12 +1488,12 @@
 }{
   \par\null\par\noindent\hangindent=4\ccwd\relax
   \textbf{关键词}：\xust@keywords@text\par
-  \xust@setdefaultlanguage
+  \xust@reset@main@language
 }
 
 % 英文摘要环境
 \newenvironment{enabstract}{%
-  \xust@setenglish
+  \xustsetup{language=english}
   \ifxust@degree@graduate
     \xust@chapter[Abstract]{ABSTRACT}%
   \else
@@ -1473,7 +1505,7 @@
   \ifxust@degree@graduate
     \cleardoublepage
   \fi
-  \xust@setdefaultlanguage
+  \xust@reset@main@language
 }
 
 
@@ -1794,151 +1826,26 @@
 
 % \subsection{参考文献}
 
-% 定义几种引用文献的标注法。
-\newcommand\bibstyle@super{%
-  \bibpunct{[}{]}{,}{s}{,}{\textsuperscript{,}}%
-  \gdef\NAT@sort{\@ne}%
-  \gdef\NAT@cmprs{\@ne}%
-}
-\newcommand\bibstyle@inline{%
-  \bibpunct{[}{]}{,}{n}{,}{,}%
-  \gdef\NAT@sort{\@ne}%
-  \gdef\NAT@cmprs{\@ne}%
-}
-\newcommand\bibstyle@authoryear{%
-  \bibpunct{(}{)}{;}{a}{,}{,}%
-  \gdef\NAT@sort{\z@}%
-  \gdef\NAT@cmprs{\z@}%
-}
-
-% 避免在 cite-style 接口的地方定义代码，
-% 因为在导言区执行 \cs{citestyle} 会妨碍 \pkg{natbib} 的 \cs{bibstyle}
-% 自动设置 \cs{citestyle}。
-\xust@option@hook{cite-style}{%
-  \citestyle{\xust@cite@style}%
-}
-
-% 使用 \cs{bibliographystyle} 命令时自动切换为对应的引用风格。
-\@namedef{bibstyle@ustcthesis-numerical}{\bibstyle@super}
-\@namedef{bibstyle@ustcthesis-authoryear}{\bibstyle@authoryear}
-\@namedef{bibstyle@ustcthesis-bachelor}{\bibstyle@super}
-
-% 如果文献序号作为叙述文字的一部分，需要临时将文献序号与正文平排
-\DeclareRobustCommand\inlinecite{\@inlinecite}
-\def\@inlinecite#1{\begingroup\let\@cite\NAT@citenum\citep{#1}\endgroup}
-
-% 标准方式调用 \cs{bibliographystyle}
-% 版本 v3.1.* 前要求用户不使用 \cs{bibliographystyle} 命令，
-% 这与标准文档类不一致。
-% 为了兼容版本进行一些修改：
-% Reserved for compatibility until 2020-07-01.
-\let\bibstyle@numbers\bibstyle@inline
-\newif\ifxust@bib@style@written
-\def\bibliography#1{%
-  \ifxust@bib@style@written\else
-    \ifxust@degree@bachelor
-      \bibliographystyle{ustcthesis-bachelor}%
+\AtEndOfPackageFile*{biblatex}{
+  \AtBeginDocument{
+    \ifthenelse{\equal{\blx@bbxfile}{apa}}{\def\bibname{REFERENCES}}{}
+    \ifthenelse{\equal{\blx@bbxfile}{apa6}}{\def\bibname{REFERENCES}}{}
+    \ifthenelse{\equal{\blx@bbxfile}{mla}}{\def\bibname{WORKS CITED}}{}
+    \ifthenelse{\equal{\blx@bbxfile}{mla-new}}{\def\bibname{WORKS CITED}}{}
+  }
+  \DeclareRobustCommand\inlinecite{\parencite}
+  \defbibheading{bibliography}[\bibname]{\@mainmatterfalse\chapter*{\bibname}}
+  % 参考文献列表格式：宋体 10.5 磅，行距 20 磅，续行缩进两字，左对齐。
+  % 本科生依然是小四宋体。
+  \renewcommand\bibfont{%
+    \ifxust@degree@graduate
+      \fontsize{10.5bp}{20bp}\selectfont
     \else
-      \bibliographystyle{ustcthesis-numerical}%
+      \normalsize
     \fi
-  \fi
-  \if@filesw
-    \immediate\write\@auxout{\string\bibdata{\zap@space#1 \@empty}}%
-  \fi
-  \@input@{\jobname.bbl}}
-\def\bibliographystyle#1{%
-  \xust@bib@style@writtentrue
-  \ifx\@begindocumenthook\@undefined\else
-    \expandafter\AtBeginDocument
-  \fi
-    {\if@filesw
-       \immediate\write\@auxout{\string\bibstyle{#1}}%
-     \fi}}
-\ifxust@legacy@cite@style
-  \ifxust@degree@graduate
-    \ifxust@cite@style@authoryear
-      \citestyle{authoryear}
-      \bibliographystyle{ustcthesis-authoryear}
-    \else
-      \ifxust@cite@style@super
-        \citestyle{super}
-      \else
-        \citestyle{inline}
-      \fi
-      \bibliographystyle{ustcthesis-numerical}
-    \fi
-  \else
-    \ifxust@cite@style@super
-      \citestyle{super}
-    \else
-      \citestyle{numbers}
-    \fi
-    \bibliographystyle{ustcthesis-bachelor}
-  \fi
-\fi
-
-% 下面修改引用标注的格式，主要是将页码写在上标位置。
-% Numerical 模式的 \cs{citet} 的页码：
-\xust@patchcmd{\NAT@citexnum}{%
-  \@ifnum{\NAT@ctype=\z@}{%
-    \if*#2*\else\NAT@cmt#2\fi
-  }{}%
-  \NAT@mbox{\NAT@@close}%
-}{%
-  \NAT@mbox{\NAT@@close}%
-  \@ifnum{\NAT@ctype=\z@}{%
-    \if*#2*\else\textsuperscript{#2}\fi
-  }{}%
-}
-
-% Numerical 模式的 \cs{citep} 的页码：
-\renewcommand\NAT@citesuper[3]{\ifNAT@swa
-\if*#2*\else#2\NAT@spacechar\fi
-\unskip\kern\p@\textsuperscript{\NAT@@open#1\NAT@@close\if*#3*\else#3\fi}%
-   \else #1\fi\endgroup}
-\renewcommand\NAT@citenum%
-    [3]{\ifNAT@swa\NAT@@open\if*#2*\else#2\NAT@spacechar\fi
-        #1\NAT@@close\if*#3*\else\textsuperscript{#3}\fi\else#1\fi\endgroup}
-        %
-        % Author-year 模式的 \cs{citet} 的页码：
-\xust@patchcmd{\NAT@citex}{%
-  \if*#2*\else\NAT@cmt#2\fi
-  \if\relax\NAT@date\relax\else\NAT@@close\fi
-}{%
-  \if\relax\NAT@date\relax\else\NAT@@close\fi
-  \if*#2*\else\textsuperscript{#2}\fi
-}
-
-% Author-year 模式的 \cs{citep} 的页码：
-\renewcommand\NAT@cite%
-    [3]{\ifNAT@swa\NAT@@open\if*#2*\else#2\NAT@spacechar\fi
-        #1\NAT@@close\if*#3*\else\textsuperscript{#3}\fi\else#1\fi\endgroup}
-        %
-        % 在顺序编码制下，\pkg{natbib} 只有在三个以上连续文献引用才会使用连接号，
-        % 这里修改为允许两个引用使用连接号。
-        % \footnote{\url{https://tex.stackexchange.com/a/86991/82731}}
-\xust@patchcmd{\NAT@citexnum}{%
-  \ifx\NAT@last@yr\relax
-    \def@NAT@last@yr{\@citea}%
-  \else
-    \def@NAT@last@yr{--\NAT@penalty}%
-  \fi
-}{%
-  \def@NAT@last@yr{-\NAT@penalty}%
-}
-
-% 参考文献列表格式：宋体 12 磅，行距 20 磅，续行缩进两字，左对齐。
-\ifxust@degree@graduate
-  \renewcommand\bibfont{\fontsize{12\bp@}{20\bp@}\selectfont}
-\fi
-\setlength{\bibsep}{0\p@ \@plus.2\p@}
-\setlength{\bibhang}{2\ccwd}
-\renewcommand\@biblabel[1]{[#1]\hfill}
-
-% 为了将参考文献加入目录和 pdf 书签，重新定义 \pkg{natbib} 的 \cmd{bibsection}
-\renewcommand\bibsection{%
-  \@mainmatterfalse
-  \chapter{\bibname}%
+  }
+  \setlength{\bibitemsep}{0\p@ \@plus.2\p@}
+  \setlength{\bibhang}{2\ccwd}
 }
 
 % BibTeX 生成参考文献表的样式在 \file{bst} 文件中提供。

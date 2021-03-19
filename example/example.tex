@@ -7,7 +7,7 @@
 % language  = chinese|english
 
 % 加载宏包、全部的配置
-\input{xustsetup}
+\input{example/setup}
 
 
 \begin{document}
@@ -42,10 +42,7 @@
 \input{example/chapters/citations.tex}
 
 \backmatter
-\bibliographystyle{ustcthesis-numerical}  % 顺序编码制
-% \bibliographystyle{ustcthesis-authoryear} % 著者出版年制
-% \bibliographystyle{ustcthesis-bachelor}   % 本科生参考文献的格式
-\bibliography{example}
+\printbibliography
 
 \appendix
 \input{example/chapters/complementary.tex}

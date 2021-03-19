@@ -11,7 +11,6 @@ endif
 NAME = xustthesis
 UPSTREAM = ustcthesis
 CLSFILES = $(NAME).cls
-BSTFILES = $(UPSTREAM)-numerical.bst $(UPSTREAM)-authoryear.bst $(UPSTREAM)-bachelor.bst
 
 SHELL = bash
 LATEXMK = latexmk -xelatex
@@ -19,7 +18,7 @@ VERSION = $(shell cat $(NAME).cls | egrep -o "\[\d\d\d\d/\d\d\/\d\d v.+\]" \
 	  | egrep -o "v\S+")
 TEXMF = $(shell kpsewhich --var-value TEXMFHOME)
 
-.PHONY: help all main doc example clean cleanall
+.PHONY: help all main doc example clean cleanall FORCE_MAKE
 
 help:
 	-@echo "Usage:"
@@ -35,17 +34,19 @@ help:
 
 all: $(ALLDEP)
 
-main: $(MAIN) $(CLSFILES) $(BSTFILES)
+main: $(MAIN) $(CLSFILES) FORCE_MAKE
 	$(LATEXMK) $<
 
 doc:
 	$(LATEXMK) doc.tex
 
-example: example/example.tex $(CLSFILES) $(BSTFILES)
+example: example/example.tex $(CLSFILES)
 	$(LATEXMK) $<
 
-clean:
-	$(LATEXMK) -c $(ALL) $(CLSFILES) $(BSTFILES)
+clean: FORCE_MAKE
+	$(LATEXMK) -c $(ALL)
+	rm -rf *.run.xml
 
-cleanall:
-	$(LATEXMK) -C $(ALL) $(CLSFILES) $(BSTFILES)
+cleanall: FORCE_MAKE
+	$(LATEXMK) -C $(ALL)
+	rm -rf *.run.xml *.bbl
