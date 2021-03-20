@@ -1423,11 +1423,10 @@
     afterskip  = \z@,
   },
   %
-  % 按照 Word 模板的格式，四级节标题：宋体 12 磅，左缩进两字，行距 20 磅，
-  % 段前段后 0 磅，序号使用全宽括号，与题名间空一格。
+  % 五级节标题：宋体小四，左缩进两字，行距 20 磅，段前段后 0 磅，序号与题名间空一格。
   paragraph = {
     format     = \rmfamily\fontsize{12\bp@}{20\bp@}\selectfont,
-    number     = (\arabic{paragraph}),
+    number     = \arabic{paragraph}),
     aftername  = \enskip,
     indent     = 2\ccwd,
     beforeskip = \z@,
@@ -1435,11 +1434,10 @@
     runin      = false,
   },
   %
-  % 按照 Word 模板的格式，五级节标题：宋体 12 磅，左缩进两字，行距 20 磅，
-  % 段前段后 0 磅，序号使用全宽括号，与题名间空一格。
+  % 六级节标题：宋体小四，左缩进两字，行距 20 磅，段前段后 0 磅，序号与题名间空一格。
   subparagraph = {
     format     = \rmfamily\fontsize{12\bp@}{20\bp@}\selectfont,
-    number     = \xust@textcircled{subparagraph},
+    number     = (\arabic{subparagraph}),
     aftername  = \enskip,
     indent     = 2\ccwd,
     beforeskip = \z@,
