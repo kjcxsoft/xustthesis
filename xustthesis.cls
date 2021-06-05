@@ -1240,7 +1240,7 @@
       \null\xust@secret@level@en\par}\par
     \vskip 0.5cm%
     {\sffamily\fontsize{20\bp@}{30\bp@}\selectfont
-      University of Science and Technology of China\par}%
+      Xi'an University of Science and Technology\par}%
     {\sffamily\fontsize{26\bp@}{30\bp@}\selectfont
       \xust@thesis@name@en\par}%
     \ifxust@degree@type@academic\else
@@ -1271,8 +1271,12 @@
   \newgeometry{margin=2.54cm}%
   \pagenumbering{Alph}%
   \pagestyle{empty}%
+  \ifxust@degree@bachelor
+  \xust@makezhtitle
+  \else
   \xust@makezhtitle
   \xust@makeentitle
+  \fi
   \restoregeometry
   \pagestyle{plain}%
 }
@@ -1407,17 +1411,17 @@
   % 三级节标题：宋体小四加粗左对齐，20 磅行距，段前 0.5，段后 0.5，
   % 序号与题名间空一格。
   subsection = {
-    format     = \rmfamily\fontsize{12\bp@}{20\bp@}\selectfont,
+    format     = \rmfamily\bfseries\fontsize{12\bp@}{20\bp@}\selectfont,
     aftername  = \enskip,
     beforeskip = 10\bp@,
     afterskip  = 10\bp@,
   },
   %
-  % 四级节标题：楷体小四，左缩进两字，行距 20 磅，段前段后 0 磅，序号与题名间空一格。
+  % 四级节标题：宋体小四，左缩进两字，行距 20 磅，段前段后 0 磅，序号与题名间空一格。
   subsubsection = {
-    format     = \ttfamily\fontsize{12\bp@}{20\bp@}\selectfont,
-    number     = \arabic{subsubsection},
-    aftername  = .\enskip,
+    format     = \rmfamily\fontsize{12\bp@}{20\bp@}\selectfont,
+    number     = \arabic{chapter}.\arabic{section}.\arabic{subsection}.\arabic{subsubsection},
+    aftername  = \enskip,
     indent     = 2\ccwd,
     beforeskip = \z@,
     afterskip  = \z@,
@@ -1475,14 +1479,7 @@
 }
 \newenvironment{abstract}{%
   \xustsetup{language=chinese}
-  \ifxust@degree@graduate
-    \xust@chapter{摘要}%
-  \else
-    \chapter{中文内容摘要}%
-    \ifxust@tocloaded\else
-      本科生需要手动将摘要置于目录后。\par
-    \fi
-  \fi
+  \xust@chapter{摘要}%
 }{
   \par\null\par\noindent\hangindent=4\ccwd\relax
   \textbf{关键词}：\xust@keywords@text\par
@@ -1492,11 +1489,7 @@
 % 英文摘要环境
 \newenvironment{enabstract}{%
   \xustsetup{language=english}
-  \ifxust@degree@graduate
-    \xust@chapter[Abstract]{ABSTRACT}%
-  \else
-    \chapter[英文内容摘要]{Abstract}%
-  \fi
+  \xust@chapter[Abstract]{ABSTRACT}%
 }{
   \par\null\par\noindent\hangindent=5.3em\relax
   \textbf{Key Words}: \xust@keywords@en@text\par
@@ -1513,14 +1506,7 @@
 \newif\ifxust@tocloaded
 
 % 研究生规定目录另面起；
-% 本科生规定从目录开始编页码，所以必须另页起。
 \renewcommand\tableofcontents{%
-  \ifxust@degree@bachelor
-    \cleardoublepage
-    \pagenumbering{arabic}%
-    \pagestyle{plain}%
-    \xust@tocloadedtrue
-  \fi
   \xust@chapter{\contentsname}%
   \@starttoc{toc}%
 }
@@ -1555,14 +1541,14 @@
 
 % 本科生要求目录中正文每章前多空一行，而目录、附录等章则不需要空行，
 % 所以不能简单判断 \cs{if@mainmatter}，需要重新定义 \cs{mainmatter} 等命令。
-\newif\ifxust@addtocspace
-\ifxust@degree@bachelor
-  \xust@addtocspacetrue
-  \g@addto@macro\frontmatter{\xust@addtocspacefalse}%
-  \g@addto@macro\mainmatter{\xust@addtocspacetrue}%
-  \g@addto@macro\backmatter{\xust@addtocspacefalse}%
-  \g@addto@macro\appendix{\xust@addtocspacefalse}%
-\fi
+% \newif\ifxust@addtocspace
+% \ifxust@degree@bachelor
+%   \xust@addtocspacetrue
+%   \g@addto@macro\frontmatter{\xust@addtocspacefalse}%
+%   \g@addto@macro\mainmatter{\xust@addtocspacetrue}%
+%   \g@addto@macro\backmatter{\xust@addtocspacefalse}%
+%   \g@addto@macro\appendix{\xust@addtocspacefalse}%
+% \fi
 
 % % 处理本科生在目录中添加空行。
 % \renewcommand\chapter{%
@@ -1857,9 +1843,6 @@
     \chapter{\xust@acknowledgements@name}%
   \else
     \xust@chapter{\xust@acknowledgements@name}%
-    \ifxust@tocloaded
-      本科生需要手动将致谢置于目录前。\par
-    \fi
   \fi
 }{}
 
