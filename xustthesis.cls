@@ -1004,7 +1004,7 @@
 
 % 正文部分另页起
 \renewcommand\mainmatter{
-  \cleardoublepage
+  \clearpage
   \pagenumbering{arabic}
   \pagestyle{plain}
   \@mainmattertrue
