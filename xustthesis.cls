@@ -1818,7 +1818,7 @@
     \ifthenelse{\equal{\blx@bbxfile}{mla-new}}{\def\bibname{WORKS CITED}}{}
   }
   \DeclareRobustCommand\inlinecite{\parencite}
-  \defbibheading{bibliography}[\bibname]{\@mainmatterfalse\chapter*{\bibname}}
+  \defbibheading{bibliography}[\bibname]{\@mainmatterfalse\chapter*{\bibname}\addcontentsline{toc}{chapter}{\bibname}}
   % 参考文献列表格式：宋体 10.5 磅，行距 20 磅，续行缩进两字，左对齐。
   % 本科生依然是小四宋体。
   \renewcommand\bibfont{%
@@ -1839,11 +1839,8 @@
 
 % 定义了一个满足要求的致谢环境：
 \newenvironment{acknowledgements}{%
-  \ifxust@degree@graduate
-    \chapter{\xust@acknowledgements@name}%
-  \else
-    \xust@chapter{\xust@acknowledgements@name}%
-  \fi
+  \chapter*{\xust@acknowledgements@name}%
+  \addcontentsline{toc}{chapter}{\xust@acknowledgements@name}
 }{}
 
 % 发表成果环境：
